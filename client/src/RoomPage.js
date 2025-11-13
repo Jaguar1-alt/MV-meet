@@ -11,7 +11,7 @@ const ICE_SERVERS = {
   ],
 };
 
-// --- Participants Sidebar Component (Unchanged) ---
+// --- Participants Sidebar Component ---
 const ParticipantsSidebar = ({ isOpen, localUser, remoteUsers }) => {
   const totalParticipants = 1 + remoteUsers.length;
 
@@ -65,7 +65,7 @@ function RoomPage() {
   const localVideoRef = useRef();
   const peerConnectionsRef = useRef(new Map());
 
-  // 1. Get user's media (Unchanged)
+  // 1. Get user's media
   useEffect(() => {
     async function getMedia() {
       const hqConstraints = {
@@ -101,7 +101,7 @@ function RoomPage() {
     getMedia();
   }, []);
 
-  // 2. Set up Socket.io and WebRTC (Unchanged)
+  // 2. Set up Socket.io and WebRTC
   useEffect(() => {
     if (!localStream || !SERVER_URL) return;
 
@@ -191,7 +191,7 @@ function RoomPage() {
     };
   }, [roomId, localStream, userName]);
 
-  // --- Control Functions (Unchanged) ---
+  // --- Control Functions
   const toggleMic = () => {
     if (localStream) {
       localStream.getAudioTracks().forEach(track => { track.enabled = !track.enabled; });
@@ -217,7 +217,7 @@ function RoomPage() {
     });
   };
 
-  // --- Screen Share Logic (Unchanged) ---
+  // --- Screen Share Logic
   const stopScreenShare = () => {
     const cameraTrack = localStream.getVideoTracks()[0];
     peerConnectionsRef.current.forEach(pc => {
@@ -249,12 +249,12 @@ function RoomPage() {
     if (isScreenSharing) { stopScreenShare(); } else { startScreenShare(); }
   };
 
-  // --- Toggle Participants (Unchanged) ---
+  // --- Toggle Participants
   const toggleParticipants = () => {
     setIsParticipantsOpen(prev => !prev);
   };
 
-  // --- Remote Video Component (Unchanged) ---
+  // --- Remote Video Component
   const RemoteVideo = ({ stream }) => {
     const videoRef = useRef();
     useEffect(() => {
@@ -265,7 +265,7 @@ function RoomPage() {
     return (<video ref={videoRef} autoPlay playsInline className="participant-video" />);
   };
 
-  // --- Main Render (Unchanged) ---
+  // --- Main Render
   return (
     <div className="main-room-layout">
       {/* --- Video Area --- */}
@@ -304,14 +304,13 @@ function RoomPage() {
           {remoteStreams.map(({ id, stream, name }) => (
             <div key={id} className="participant-wrapper">
               <RemoteVideo stream={stream} />
-              {/* We can add remote avatars here later */}
               <div className="participant-name">{name}</div>
             </div>
           ))}
           
         </div>
 
-        {/* --- Controls Bar (Unchanged) --- */}
+        {/* --- Controls Bar --- */}
         <div className="controls-bar">
           <button className={`control-button ${!isMicOn ? 'off' : ''}`} onClick={toggleMic}>
             {isMicOn ? '🎤' : '🔇'}
