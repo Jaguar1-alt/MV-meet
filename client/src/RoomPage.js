@@ -51,7 +51,7 @@ function RoomPage() {
 
   const [userName] = useState(location.state?.userName || 'Guest');
   
-  const [socket, setSocket] = useState(null);
+  // const [socket, setSocket] = useState(null); // <-- FIX 1: This line is removed
   const [localStream, setLocalStream] = useState(null);
   const [remoteStreams, setRemoteStreams] = useState([]);
   
@@ -65,54 +65,32 @@ function RoomPage() {
   const localVideoRef = useRef();
   const peerConnectionsRef = useRef(new Map());
 
-  // 1. Get user's media (UPDATED FOR HQ)
+  // 1. Get user's media (Unchanged)
   useEffect(() => {
     async function getMedia() {
-      // --- NEW: HQ Video Constraints ---
       const hqConstraints = {
-        video: {
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-          facingMode: 'user'
-        },
+        video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' },
         audio: true,
       };
-      
-      const standardConstraints = {
-        video: { facingMode: 'user' },
-        audio: true
-      };
-      
-      const fallbackConstraints = {
-        video: true,
-        audio: true
-      };
+      const standardConstraints = { video: { facingMode: 'user' }, audio: true };
+      const fallbackConstraints = { video: true, audio: true };
 
       try {
-        // Try to get 720p first
         const stream = await navigator.mediaDevices.getUserMedia(hqConstraints);
         setLocalStream(stream);
-        if (localVideoRef.current) {
-          localVideoRef.current.srcObject = stream;
-        }
+        if (localVideoRef.current) localVideoRef.current.srcObject = stream;
       } catch (error) {
         console.error("Failed to get HQ (720p) media, trying standard.", error);
         try {
-          // Fallback to standard
           const stream = await navigator.mediaDevices.getUserMedia(standardConstraints);
           setLocalStream(stream);
-          if (localVideoRef.current) {
-            localVideoRef.current.srcObject = stream;
-          }
+          if (localVideoRef.current) localVideoRef.current.srcObject = stream;
         } catch (fallbackError) {
           console.error("Standard media failed, trying absolute fallback.", fallbackError);
           try {
-            // Absolute fallback
             const stream = await navigator.mediaDevices.getUserMedia(fallbackConstraints);
             setLocalStream(stream);
-            if (localVideoRef.current) {
-              localVideoRef.current.srcObject = stream;
-            }
+            if (localVideoRef.current) localVideoRef.current.srcObject = stream;
           } catch (finalError) {
             console.error("All media attempts failed.", finalError);
             alert("Cannot access camera/mic. Please check permissions.");
@@ -126,9 +104,10 @@ function RoomPage() {
   // 2. Set up Socket.io and WebRTC (Unchanged)
   useEffect(() => {
     if (!localStream || !SERVER_URL) return;
+
     const newSocket = io(SERVER_URL);
-    setSocket(newSocket);
-    // ... (rest of WebRTC/Socket.io setup is unchanged) ...
+    // setSocket(newSocket); // <-- FIX 1: This line is removed
+
     const createPeerConnection = (targetSocketId, targetName) => {
       const pc = new RTCPeerConnection(ICE_SERVERS);
       localStream.getTracks().forEach(track => {
@@ -197,10 +176,17 @@ function RoomPage() {
       peerConnectionsRef.current.delete(userId);
       setRemoteStreams(prev => prev.filter(s => s.id !== userId));
     });
+
+    // --- FIX 2: exhaustive-deps fix ---
+    // Store the ref value in a variable inside the effect
+    const connections = peerConnectionsRef.current;
+    
     // Clean up
     return () => {
+      console.log('Disconnecting...');
       localStream?.getTracks().forEach(track => track.stop());
-      peerConnectionsRef.current.forEach(pc => pc.close());
+      // Use the variable in the cleanup function
+      connections.forEach(pc => pc.close());
       newSocket.disconnect();
     };
   }, [roomId, localStream, userName]);
@@ -218,7 +204,7 @@ function RoomPage() {
       setIsVideoOn(!isVideoOn);
     }
   };
-  const handleLeaveRoom = () => { navigate('/home'); };
+  const handleLeaveRoom = () => { navigate('/home'); }; // Corrected leave path
   const handleCopyLink = () => {
     navigator.clipboard.writeText(window.location.href).then(() => {
       setShowCopyNotification(true);
@@ -279,7 +265,7 @@ function RoomPage() {
     return (<video ref={videoRef} autoPlay playsInline className="participant-video" />);
   };
 
-  // --- Main Render (Updated) ---
+  // --- Main Render (Unchanged) ---
   return (
     <div className="main-room-layout">
       {/* --- Video Area --- */}
