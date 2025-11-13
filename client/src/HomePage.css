@@ -1,0 +1,193 @@
+/* client/src/HomePage.css */
+
+/* --- Base & Background --- */
+.home-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  background: white;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+/* --- LOGO Styles --- */
+.app-logo {
+  max-width: 130px;
+  height: auto;
+  margin-bottom: 120px;
+  margin-top: -50px;
+}
+
+/* --- Content Wrapper --- */
+.home-content-wrapper {
+  width: 720px;
+  text-align: center;
+  margin-top: -70px;
+}
+
+/* --- Typography --- */
+h1 {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: #1f2937;
+  margin-top: 0;
+  margin-bottom: 8px;
+}
+
+p {
+  color: #4b5563;
+  font-size: 1.1rem;
+  margin-bottom: 32px;
+}
+
+/* --- NEW: Input Wrapper (for icons) --- */
+.input-wrapper {
+  position: relative;
+  width: 100%;
+  margin: 10px 0;
+}
+
+.input-icon {
+  position: absolute;
+  top: 50%;
+  left: 16px;
+  transform: translateY(-50%);
+  color: #9ca3af; /* Icon color */
+  font-size: 1.2rem;
+}
+
+/* --- Forms & Inputs (Updated) --- */
+.home-input {
+  width: 100%;
+  padding: 14px 16px;
+  padding-left: 50px; /* Make space for the icon */
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+  background-color: #f9fafb;
+  font-size: 1rem;
+  box-sizing: border-box;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.home-input:focus {
+  outline: none;
+  border-color: #facc15;
+  box-shadow: 0 0 0 3px rgba(250, 204, 21, 0.3);
+}
+
+/* --- Buttons (Updated) --- */
+.home-button {
+  width: 100%;
+  padding: 14px;
+  border: none;
+  border-radius: 8px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+  
+  /* NEW: For icon alignment */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+}
+
+.home-button.primary {
+  background-color: #facc15;
+  color: #1f2937;
+  margin-top: 10px;
+}
+
+.home-button.primary:hover {
+  background-color: #e5e7eb;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.home-button.secondary {
+  background-color: #facc15;
+  color: #1f2937;
+  margin-top: 8px;
+}
+
+.home-button.secondary:hover {
+  background-color: #e5e7eb;
+}
+
+.or-divider {
+  margin: 28px 0;
+  color: #9ca3af;
+  font-weight: 500;
+}
+
+/* --- Lobby Styles --- */
+.lobby-container {
+  display: flex;
+  margin: 20px 0;
+  width: 100%;
+}
+
+.lobby-input {
+  flex-grow: 1;
+  padding: 14px 16px;
+  border-radius: 8px 0 0 8px;
+  border: 1px solid #d1d5db;
+  background-color: #f9fafb;
+  color: #1f2937;
+  font-size: 1rem;
+  border-right: none;
+}
+.lobby-input:focus { outline: none; }
+
+.lobby-copy-button {
+  padding: 14px 20px;
+  border: none;
+  border-radius: 0 8px 8px 0;
+  background-color: #eab308;
+  color: #1f2937;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+.lobby-copy-button:hover { background-color: #facc15; }
+
+.lobby-back-button {
+  background: none;
+  border: none;
+  color: #6b7280;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  margin-top: 16px;
+}
+.lobby-back-button:hover {
+  color: #1f2937;
+  text-decoration: underline;
+}
+
+/* --- RESPONSIVE STYLES --- */
+@media (max-width: 768px) {
+  .app-logo {
+    max-width: 140px;
+    margin-bottom: 20px;
+  }
+  .home-content-wrapper {
+    width: 100%;
+    padding: 0;
+  }
+  h1 { font-size: 2rem; }
+  p { font-size: 1rem; }
+  @media (max-width: 400px) {
+    .lobby-container { flex-direction: column; }
+    .lobby-input {
+      border-radius: 8px 8px 0 0;
+      border-right: 1px solid #d1d5db;
+      text-align: center;
+    }
+    .lobby-copy-button { border-radius: 0 0 8px 8px; }
+  }
+}

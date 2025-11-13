@@ -1,0 +1,7 @@
+# client/public/robots.txt
+
+User-agent: *
+Allow: /
+
+# Disallow all crawlers from the /room/ directory
+Disallow: /room/
