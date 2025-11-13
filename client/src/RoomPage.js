@@ -11,25 +11,21 @@ const ICE_SERVERS = {
   ],
 };
 
-// --- Participants Sidebar Component ---
+// --- Participants Sidebar Component (Unchanged) ---
 const ParticipantsSidebar = ({ isOpen, localUser, remoteUsers }) => {
   const totalParticipants = 1 + remoteUsers.length;
-
   return (
     <div className={`participants-sidebar ${!isOpen ? 'closed' : ''}`}>
       <div className="participants-header">
         Participants ({totalParticipants})
       </div>
       <div className="participants-list">
-        {/* Local User */}
         <div className="participant-item">
           <div className="participant-avatar">
             {localUser.name.charAt(0).toUpperCase()}
           </div>
           <span className="participant-name-text">{localUser.name} (You)</span>
         </div>
-        
-        {/* Remote Users */}
         {remoteUsers.map(user => (
           <div key={user.id} className="participant-item">
             <div className="participant-avatar">
@@ -50,7 +46,6 @@ function RoomPage() {
   const navigate = useNavigate();
 
   const [userName] = useState(location.state?.userName || 'Guest');
-  
   const [localStream, setLocalStream] = useState(null);
   const [remoteStreams, setRemoteStreams] = useState([]);
   
@@ -60,12 +55,35 @@ function RoomPage() {
   const [isScreenSharing, setIsScreenSharing] = useState(false);
   const [isParticipantsOpen, setIsParticipantsOpen] = useState(false);
   
+  const [videoDevices, setVideoDevices] = useState([]);
+  const [currentVideoDeviceIndex, setCurrentVideoDeviceIndex] = useState(0);
+
   const screenStreamRef = useRef(null);
   const localVideoRef = useRef();
   const peerConnectionsRef = useRef(new Map());
 
-  // 1. Get user's media
+  // 1. Get user's media (THIS IS THE FIXED FUNCTION)
   useEffect(() => {
+    // Helper function to set streams and find cameras
+    const setupMedia = async (stream) => {
+      setLocalStream(stream);
+      if (localVideoRef.current) {
+        localVideoRef.current.srcObject = stream;
+      }
+
+      // Enumerate devices AFTER getting permission
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const videos = devices.filter(d => d.kind === 'videoinput');
+      setVideoDevices(videos);
+
+      // Find the index of the current device
+      const currentTrack = stream.getVideoTracks()[0];
+      const currentIndex = videos.findIndex(
+        d => d.deviceId === currentTrack.getSettings().deviceId
+      );
+      setCurrentVideoDeviceIndex(currentIndex > -1 ? currentIndex : 0);
+    };
+
     async function getMedia() {
       const hqConstraints = {
         video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' },
@@ -76,20 +94,17 @@ function RoomPage() {
 
       try {
         const stream = await navigator.mediaDevices.getUserMedia(hqConstraints);
-        setLocalStream(stream);
-        if (localVideoRef.current) localVideoRef.current.srcObject = stream;
+        await setupMedia(stream);
       } catch (error) {
         console.error("Failed to get HQ (720p) media, trying standard.", error);
         try {
           const stream = await navigator.mediaDevices.getUserMedia(standardConstraints);
-          setLocalStream(stream);
-          if (localVideoRef.current) localVideoRef.current.srcObject = stream;
+          await setupMedia(stream);
         } catch (fallbackError) {
           console.error("Standard media failed, trying absolute fallback.", fallbackError);
           try {
             const stream = await navigator.mediaDevices.getUserMedia(fallbackConstraints);
-            setLocalStream(stream);
-            if (localVideoRef.current) localVideoRef.current.srcObject = stream;
+            await setupMedia(stream);
           } catch (finalError) {
             console.error("All media attempts failed.", finalError);
             alert("Cannot access camera/mic. Please check permissions.");
@@ -98,14 +113,14 @@ function RoomPage() {
       }
     }
     getMedia();
-  }, []);
+  }, []); // Only run once on mount
 
-  // 2. Set up Socket.io and WebRTC
+  // 2. Set up Socket.io and WebRTC (Unchanged)
   useEffect(() => {
     if (!localStream || !SERVER_URL) return;
 
     const newSocket = io(SERVER_URL);
-
+    
     const createPeerConnection = (targetSocketId, targetName) => {
       const pc = new RTCPeerConnection(ICE_SERVERS);
       localStream.getTracks().forEach(track => {
@@ -174,32 +189,21 @@ function RoomPage() {
       peerConnectionsRef.current.delete(userId);
       setRemoteStreams(prev => prev.filter(s => s.id !== userId));
     });
-
-    // --- NEW: Listen for room expiration ---
     newSocket.on('room-expired', (message) => {
-      // Stop the user's camera/mic
       localStream?.getTracks().forEach(track => track.stop());
-      
-      // Alert the user
       alert(message);
-      
-      // Redirect to home
       navigate('/home');
     });
-    // --- END OF NEW LISTENER ---
 
     const connections = peerConnectionsRef.current;
-    
-    // Clean up
     return () => {
-      console.log('Disconnecting...');
       localStream?.getTracks().forEach(track => track.stop());
       connections.forEach(pc => pc.close());
       newSocket.disconnect();
     };
-  }, [roomId, localStream, userName, navigate]); // Added 'navigate' to dependency array
+  }, [roomId, localStream, userName, navigate]);
 
-  // --- Control Functions
+  // --- Control Functions (Unchanged) ---
   const toggleMic = () => {
     if (localStream) {
       localStream.getAudioTracks().forEach(track => { track.enabled = !track.enabled; });
@@ -224,8 +228,9 @@ function RoomPage() {
       alert('Failed to copy link.');
     });
   };
+  const toggleParticipants = () => { setIsParticipantsOpen(prev => !prev); };
 
-  // --- Screen Share Logic
+  // --- Screen Share Logic (Unchanged) ---
   const stopScreenShare = () => {
     const cameraTrack = localStream.getVideoTracks()[0];
     peerConnectionsRef.current.forEach(pc => {
@@ -257,12 +262,45 @@ function RoomPage() {
     if (isScreenSharing) { stopScreenShare(); } else { startScreenShare(); }
   };
 
-  // --- Toggle Participants
-  const toggleParticipants = () => {
-    setIsParticipantsOpen(prev => !prev);
+  // --- Camera Switch Logic (Unchanged) ---
+  const handleSwitchCamera = async () => {
+    if (videoDevices.length < 2 || !localStream) return;
+
+    if (isScreenSharing) {
+      stopScreenShare();
+    }
+
+    const nextIndex = (currentVideoDeviceIndex + 1) % videoDevices.length;
+    const nextDevice = videoDevices[nextIndex];
+
+    try {
+      const newStream = await navigator.mediaDevices.getUserMedia({
+        video: { deviceId: { exact: nextDevice.deviceId } }
+      });
+      const newVideoTrack = newStream.getVideoTracks()[0];
+      const oldVideoTrack = localStream.getVideoTracks()[0];
+      oldVideoTrack.stop();
+
+      localStream.removeTrack(oldVideoTrack);
+      localStream.addTrack(newVideoTrack);
+
+      localVideoRef.current.srcObject = localStream;
+
+      peerConnectionsRef.current.forEach(pc => {
+        const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
+        if (sender) {
+          sender.replaceTrack(newVideoTrack);
+        }
+      });
+
+      setCurrentVideoDeviceIndex(nextIndex);
+      
+    } catch (err) {
+      console.error("Error switching camera:", err);
+    }
   };
 
-  // --- Remote Video Component
+  // --- Remote Video Component (Unchanged) ---
   const RemoteVideo = ({ stream }) => {
     const videoRef = useRef();
     useEffect(() => {
@@ -273,7 +311,7 @@ function RoomPage() {
     return (<video ref={videoRef} autoPlay playsInline className="participant-video" />);
   };
 
-  // --- Main Render
+  // --- Main Render (Unchanged) ---
   return (
     <div className="main-room-layout">
       {/* --- Video Area --- */}
@@ -318,7 +356,7 @@ function RoomPage() {
           
         </div>
 
-        {/* --- Controls Bar --- */}
+        {/* --- Controls Bar (Unchanged) --- */}
         <div className="controls-bar">
           <button className={`control-button ${!isMicOn ? 'off' : ''}`} onClick={toggleMic}>
             {isMicOn ? '🎤' : '🔇'}
@@ -341,6 +379,13 @@ function RoomPage() {
           <button className="control-button share" onClick={toggleParticipants}>
             👥
           </button>
+
+          {/* Switch Camera Button */}
+          {videoDevices.length > 1 && (
+            <button className="control-button switch-cam" onClick={handleSwitchCamera}>
+              🔄
+            </button>
+          )}
           
           <button className="control-button leave" onClick={handleLeaveRoom}>
             📞

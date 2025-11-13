@@ -220,3 +220,27 @@ body, html {
 .participant-name-text {
   font-weight: 500;
 }
+
+/* client/src/RoomPage.css */
+
+/* ... (keep all your other styles above) ... */
+
+/* --- NEW SWITCH CAMERA STYLES --- */
+
+.control-button.switch-cam {
+  background-color: #555;
+  color: white;
+  display: flex; /* Show by default (for mobile) */
+}
+
+.control-button.switch-cam:hover {
+  background-color: #666;
+}
+
+/* Hide the switch camera button on desktops */
+/* (769px is just above the mobile breakpoint) */
+@media (min-width: 769px) {
+  .control-button.switch-cam {
+    display: none; /* Hide on screens wider than 768px */
+  }
+}
