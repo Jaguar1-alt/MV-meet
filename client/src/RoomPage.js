@@ -52,16 +52,14 @@ function RoomPage() {
   const [isMicOn, setIsMicOn] = useState(true);
   const [isVideoOn, setIsVideoOn] = useState(true);
   const [showCopyNotification, setShowCopyNotification] = useState(false);
-  const [isScreenSharing, setIsScreenSharing] = useState(false);
+  const [isScreenSharing, setIsScreenSharing] = useState(false); // This is Line 55
   const [isParticipantsOpen, setIsParticipantsOpen] = useState(false);
   
   const [videoDevices, setVideoDevices] = useState([]);
   const [currentVideoDeviceIndex, setCurrentVideoDeviceIndex] = useState(0);
-  
-  // --- NEW STATE for mirroring ---
-  const [isFrontCamera, setIsFrontCamera] = useState(true); // Assume front by default
+  const [isFrontCamera, setIsFrontCamera] = useState(true);
 
-  const screenStreamRef = useRef(null);
+  const screenStreamRef = useRef(null); // This is Line 64
   const localVideoRef = useRef();
   const peerConnectionsRef = useRef(new Map());
 
@@ -83,8 +81,7 @@ function RoomPage() {
       const currentTrack = stream.getVideoTracks()[0];
       const settings = currentTrack.getSettings();
       
-      // --- NEW: Check if it's front or back ---
-      setIsFrontCamera(settings.facingMode !== 'environment'); // 'environment' is the back camera
+      setIsFrontCamera(settings.facingMode !== 'environment');
       
       const currentIndex = videos.findIndex(
         d => d.deviceId === settings.deviceId
@@ -123,7 +120,7 @@ function RoomPage() {
     getMedia();
   }, []); // Only run once on mount
 
-  // 2. Set up Socket.io and WebRTC (Unchanged)
+  // 2. Set up Socket.io and WebRTC
   useEffect(() => {
     if (!localStream || !SERVER_URL) return;
 
@@ -211,7 +208,7 @@ function RoomPage() {
     };
   }, [roomId, localStream, userName, navigate]);
 
-  // --- Control Functions (Unchanged) ---
+  // --- Control Functions ---
   const toggleMic = () => {
     if (localStream) {
       localStream.getAudioTracks().forEach(track => { track.enabled = !track.enabled; });
@@ -238,45 +235,63 @@ function RoomPage() {
   };
   const toggleParticipants = () => { setIsParticipantsOpen(prev => !prev); };
 
-  // --- Screen Share Logic (Unchanged) ---
-  const stopScreenShare = () => { /* ... (unchanged) ... */ };
-  const startScreenShare = async () => { /* ... (unchanged) ... */ };
-  const handleToggleScreenShare = () => { /* ... (unchanged) ... */ };
+  // --- Screen Share Logic (This is the full logic) ---
+  const stopScreenShare = () => {
+    const cameraTrack = localStream.getVideoTracks()[0];
+    peerConnectionsRef.current.forEach(pc => {
+      const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
+      if (sender) { sender.replaceTrack(cameraTrack); }
+    });
+    screenStreamRef.current?.getTracks().forEach(track => track.stop());
+    localVideoRef.current.srcObject = localStream;
+    setIsScreenSharing(false); // Used here
+    screenStreamRef.current = null; // Used here
+  };
+  
+  const startScreenShare = async () => { // This is Line 243
+    try {
+      const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+      screenStreamRef.current = stream; // Used here
+      const screenTrack = stream.getVideoTracks()[0];
+      
+      peerConnectionsRef.current.forEach(pc => {
+        const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
+        if (sender) { sender.replaceTrack(screenTrack); }
+      });
 
-  // --- Camera Switch Logic (UPDATED) ---
+      localVideoRef.current.srcObject = stream;
+      setIsScreenSharing(true); // Used here
+
+      screenTrack.onended = () => { stopScreenShare(); };
+    } catch (err) {
+      console.error("Error starting screen share", err);
+    }
+  };
+
+  const handleToggleScreenShare = () => {
+    if (isScreenSharing) { stopScreenShare(); } else { startScreenShare(); } // Uses startScreenShare
+  };
+
+  // --- Camera Switch Logic ---
   const handleSwitchCamera = async () => {
     if (videoDevices.length < 2 || !localStream) return;
-
-    if (isScreenSharing) {
-      stopScreenShare();
-    }
-
+    if (isScreenSharing) { stopScreenShare(); }
     const nextIndex = (currentVideoDeviceIndex + 1) % videoDevices.length;
     const nextDevice = videoDevices[nextIndex];
 
     try {
-      // Add HQ constraints
       const newConstraints = {
-        video: { 
-          deviceId: { exact: nextDevice.deviceId },
-          width: { ideal: 1280 },
-          height: { ideal: 720 }
-        }
+        video: { deviceId: { exact: nextDevice.deviceId }, width: { ideal: 1280 }, height: { ideal: 720 } }
       };
-      
       const newStream = await navigator.mediaDevices.getUserMedia(newConstraints);
       const newVideoTrack = newStream.getVideoTracks()[0];
-      
-      // --- NEW: Check facing mode ---
       const settings = newVideoTrack.getSettings();
       setIsFrontCamera(settings.facingMode !== 'environment');
       
       const oldVideoTrack = localStream.getVideoTracks()[0];
       oldVideoTrack.stop();
-
       localStream.removeTrack(oldVideoTrack);
       localStream.addTrack(newVideoTrack);
-
       localVideoRef.current.srcObject = localStream;
 
       peerConnectionsRef.current.forEach(pc => {
@@ -285,15 +300,13 @@ function RoomPage() {
           sender.replaceTrack(newVideoTrack);
         }
       });
-
       setCurrentVideoDeviceIndex(nextIndex);
-      
     } catch (err) {
       console.error("Error switching camera:", err);
     }
   };
 
-  // --- Remote Video Component (Unchanged) ---
+  // --- Remote Video Component ---
   const RemoteVideo = ({ stream }) => {
     const videoRef = useRef();
     useEffect(() => {
@@ -304,7 +317,7 @@ function RoomPage() {
     return (<video ref={videoRef} autoPlay playsInline className="participant-video" />);
   };
 
-  // --- Main Render (UPDATED) ---
+  // --- Main Render ---
   return (
     <div className="main-room-layout">
       {/* --- Video Area --- */}
@@ -325,8 +338,7 @@ function RoomPage() {
               muted 
               className="participant-video"
               style={{ 
-                // --- THIS IS THE FIX ---
-                transform: isFrontCamera ? 'scaleX(-1)' : 'none', 
+                transform: isFrontCamera && !isScreenSharing ? 'scaleX(-1)' : 'none',
                 visibility: isVideoOn ? 'visible' : 'hidden' 
               }}
             />
@@ -347,10 +359,9 @@ function RoomPage() {
               <div className="participant-name">{name}</div>
             </div>
           ))}
-          
         </div>
 
-        {/* --- Controls Bar (Unchanged) --- */}
+        {/* --- Controls Bar --- */}
         <div className="controls-bar">
           <button className={`control-button ${!isMicOn ? 'off' : ''}`} onClick={toggleMic}>
             {isMicOn ? '🎤' : '🔇'}
@@ -361,7 +372,7 @@ function RoomPage() {
           
           <button 
             className={`control-button screenshare ${isScreenSharing ? 'on' : ''}`} 
-            onClick={handleToggleScreenShare}
+            onClick={handleToggleScreenShare} // This uses the functions
           >
             🖥️
           </button>
