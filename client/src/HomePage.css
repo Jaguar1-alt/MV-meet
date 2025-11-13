@@ -23,7 +23,7 @@
 
 /* --- Content Wrapper --- */
 .home-content-wrapper {
-  width: 720px;
+  width: 720px; /* This is for desktop */
   text-align: center;
   margin-top: -70px;
 }
@@ -176,7 +176,7 @@ p {
     margin-bottom: 20px;
   }
   .home-content-wrapper {
-    width: 100%;
+    width: 100%; /* <-- This makes it responsive */
     padding: 0;
   }
   h1 { font-size: 2rem; }
