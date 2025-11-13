@@ -27,33 +27,55 @@ app.get('/', (req, res) => {
 });
 
 // --- Main Room Logic ---
+const userTracker = new Map();
 
-// This will store user info { roomId, name }
-const userTracker = new Map(); 
+// --- NEW: Add a map to track room creation times ---
+const roomCreationTimes = new Map();
+const ONE_DAY_IN_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 io.on('connection', (socket) => {
   console.log(`User connected: ${socket.id}`);
 
-  // 1. Join Room Logic (Updated with Name)
+  // 1. Join Room Logic (Updated with Expiration)
   socket.on('join-room', (roomId, userId, userName) => {
+    
+    // --- NEW Expiration Logic ---
+    const now = new Date();
+    let createdAt = roomCreationTimes.get(roomId);
+
+    if (!createdAt) {
+      // This is the first user in the room. Set the creation time.
+      createdAt = now;
+      roomCreationTimes.set(roomId, createdAt);
+      console.log(`New room created: ${roomId} at ${createdAt.toISOString()}`);
+    } else {
+      // This is an existing room. Check if it's expired.
+      const roomAge = now - createdAt;
+      if (roomAge > ONE_DAY_IN_MS) {
+        console.log(`Expired room join attempt: ${roomId}`);
+        // Delete the expired room
+        roomCreationTimes.delete(roomId);
+        // Tell the user it's expired and stop them from joining
+        socket.emit('room-expired', 'This room was created over 24 hours ago and has expired.');
+        return; // Stop the function here
+      }
+    }
+    // --- End of Expiration Logic ---
+
+    // (The rest of the join logic remains the same)
     console.log(`User ${userName} (${userId}) joining room ${roomId}`);
     socket.join(roomId);
     
-    // Store this user's info
     userTracker.set(socket.id, { roomId, name: userName });
 
-    // Get all other users in the room
     const otherUsers = Array.from(io.sockets.adapter.rooms.get(roomId) || [])
       .filter((id) => id !== socket.id)
       .map((id) => {
-        // Get the name for each user
         return { id: id, name: userTracker.get(id)?.name || 'Someone' };
       });
 
-    // Tell *this* socket about all *other* users (with their names)
     socket.emit('all-users', otherUsers);
 
-    // Notify *other* users that a new peer has joined (with their name)
     socket.to(roomId).emit('user-joined', { 
       id: socket.id, 
       name: userName 
@@ -66,18 +88,11 @@ io.on('connection', (socket) => {
   });
 
   // 3. WebRTC Signaling "Pass-through" (Updated)
-  
-  // --- THIS IS THE UPDATED BLOCK ---
   socket.on('offer', (payload) => {
-    // Find the sender's name from our tracker
-    const senderInfo = userTracker.get(payload.caller); // 'caller' is the socket.id
-    // Add the name to the payload
+    const senderInfo = userTracker.get(payload.caller);
     payload.callerName = senderInfo ? senderInfo.name : 'Guest'; 
-    
-    // Send the *full* payload to the target
     io.to(payload.target).emit('offer', payload);
   });
-  // --- END OF UPDATED BLOCK ---
 
   socket.on('answer', (payload) => {
     io.to(payload.target).emit('answer', payload);
@@ -94,10 +109,8 @@ io.on('connection', (socket) => {
     
     if (userInfo) {
       const { roomId } = userInfo;
-      // Tell everyone else in that room this user left
       socket.to(roomId).emit('user-left', socket.id);
     }
-    // Clean up tracker
     userTracker.delete(socket.id); 
   });
 });

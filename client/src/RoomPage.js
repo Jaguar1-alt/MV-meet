@@ -51,7 +51,6 @@ function RoomPage() {
 
   const [userName] = useState(location.state?.userName || 'Guest');
   
-  // const [socket, setSocket] = useState(null); // <-- FIX 1: This line is removed
   const [localStream, setLocalStream] = useState(null);
   const [remoteStreams, setRemoteStreams] = useState([]);
   
@@ -106,7 +105,6 @@ function RoomPage() {
     if (!localStream || !SERVER_URL) return;
 
     const newSocket = io(SERVER_URL);
-    // setSocket(newSocket); // <-- FIX 1: This line is removed
 
     const createPeerConnection = (targetSocketId, targetName) => {
       const pc = new RTCPeerConnection(ICE_SERVERS);
@@ -177,19 +175,29 @@ function RoomPage() {
       setRemoteStreams(prev => prev.filter(s => s.id !== userId));
     });
 
-    // --- FIX 2: exhaustive-deps fix ---
-    // Store the ref value in a variable inside the effect
+    // --- NEW: Listen for room expiration ---
+    newSocket.on('room-expired', (message) => {
+      // Stop the user's camera/mic
+      localStream?.getTracks().forEach(track => track.stop());
+      
+      // Alert the user
+      alert(message);
+      
+      // Redirect to home
+      navigate('/home');
+    });
+    // --- END OF NEW LISTENER ---
+
     const connections = peerConnectionsRef.current;
     
     // Clean up
     return () => {
       console.log('Disconnecting...');
       localStream?.getTracks().forEach(track => track.stop());
-      // Use the variable in the cleanup function
       connections.forEach(pc => pc.close());
       newSocket.disconnect();
     };
-  }, [roomId, localStream, userName]);
+  }, [roomId, localStream, userName, navigate]); // Added 'navigate' to dependency array
 
   // --- Control Functions
   const toggleMic = () => {
@@ -204,7 +212,7 @@ function RoomPage() {
       setIsVideoOn(!isVideoOn);
     }
   };
-  const handleLeaveRoom = () => { navigate('/home'); }; // Corrected leave path
+  const handleLeaveRoom = () => { navigate('/home'); };
   const handleCopyLink = () => {
     navigator.clipboard.writeText(window.location.href).then(() => {
       setShowCopyNotification(true);
