@@ -197,7 +197,7 @@ function RoomPage() {
     newSocket.on('room-expired', (message) => {
       localStream?.getTracks().forEach(track => track.stop());
       alert(message);
-      navigate('/home');
+      navigate('/');
     });
 
     const connections = peerConnectionsRef.current;
@@ -221,7 +221,7 @@ function RoomPage() {
       setIsVideoOn(!isVideoOn);
     }
   };
-  const handleLeaveRoom = () => { navigate('/home'); };
+  const handleLeaveRoom = () => { navigate('/'); };
   const handleCopyLink = () => {
     navigator.clipboard.writeText(window.location.href).then(() => {
       setShowCopyNotification(true);
