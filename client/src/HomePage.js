@@ -1,150 +1,124 @@
-// client/src/HomePage.js
-import React, { useState } from 'react';
-import { v4 as uuidv4 } from 'uuid';
-import { useNavigate } from 'react-router-dom';
-import './HomePage.css'; // Import the CSS
-import MVMeetLogo from './assets/mv meet.png';
-
-// --- NEW: Import Icons ---
-import { 
-  FaUser, 
-  FaKeyboard, 
-  FaVideo, 
-  FaSignInAlt 
-} from 'react-icons/fa';
-// --- End New ---
+import React, { useState, useEffect } from "react";
+import { v4 as uuidv4 } from "uuid";
+import { useNavigate } from "react-router-dom";
+import "./HomePage.css";
 
 function HomePage() {
   const navigate = useNavigate();
-  const [name, setName] = useState('');
-  const [roomId, setRoomId] = useState('');
-  const [showLobby, setShowLobby] = useState(false);
 
-  // --- (All handle... functions are unchanged) ---
+  const [name, setName] = useState("");
+  const [roomId, setRoomId] = useState("");
+  const [showUI, setShowUI] = useState(false);
+  const [roomCreated, setRoomCreated] = useState(false);
+
+  // 🎬 Show rope + UI after 2 seconds
+  useEffect(() => {
+    const timer = setTimeout(() => setShowUI(true), 2000);
+    return () => clearTimeout(timer);
+  }, []);
+
   const handleCreateRoom = () => {
-    if (!name) return alert('Please enter your name');
-    const newRoomId = uuidv4();
-    setRoomId(newRoomId);
-    setShowLobby(true);
+    if (!name) return alert("Enter your name");
+    const id = uuidv4();
+    setRoomId(id);
+    setRoomCreated(true);
+  };
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(roomId);
+    alert("Room ID copied");
+  };
+
+  const handleJoinCreatedRoom = () => {
+    navigate(`/room/${roomId}`, { state: { userName: name } });
   };
 
   const handleJoinWithCode = () => {
-    if (!name) return alert('Please enter your name');
-    if (!roomId) return alert('Please enter a room code');
+    if (!name || !roomId) return alert("Fill all fields");
     navigate(`/room/${roomId}`, { state: { userName: name } });
   };
 
-  const handleJoinFromLobby = () => {
-    navigate(`/room/${roomId}`, { state: { userName: name } });
+  // 🔙 NEW: Back button handler
+  const handleBack = () => {
+    setRoomCreated(false);
+    setRoomId(""); // optional but clean UX
   };
 
-  const copyRoomId = () => {
-    navigator.clipboard.writeText(roomId).then(() => {
-      alert('Room Code copied to clipboard!');
-    }, () => {
-      alert('Failed to copy. Please copy it manually.');
-    });
-  };
+  return (
+    <div className="page">
+      {/* 🎥 Background Video */}
+      <video className="bg-video" autoPlay muted loop playsInline>
+        <source src="/mv-meet-intro.mp4" type="video/mp4" />
+      </video>
 
-  // --- HeadTags Helper (Unchanged) ---
-  const HeadTags = () => (
-    <>
-      <title>MV Meet - Simple & Free Video Calling</title>
-      <meta name="description" content="Create free video call rooms and share the link to meet with friends or colleagues. No sign-up required." />
-      <meta property="og:title" content="MV Meet - Simple & Free Video Calling" />
-      <meta property="og:description" content="Create free video call rooms and share the link to meet with friends or colleagues." />
-      <meta property="og:image" content="%PUBLIC_URL%/mv meet.png" />
-      <meta property="og:url" content="http://localhost:3000" />
-      <meta property="og:type" content="website" />
-    </>
-  );
+      {/* Light overlay */}
+      <div className="overlay" />
 
-  // --- Render Logic (Updated with Icons) ---
-
-  if (showLobby) {
-    // --- LOBBY VIEW ---
-    return (
-      <div className="home-container">
-        <HeadTags />
-        <img src={MVMeetLogo} alt="MV Meet Logo" className="app-logo" /> 
-        
-        <div className="home-content-wrapper">
-          <h1>Your Room is Ready!</h1>
-          <p>Share this code with others to join:</p>
-          
-          <div className="lobby-container">
-            <input 
-              type="text"
-              value={roomId}
-              readOnly
-              className="lobby-input"
-            />
-            <button onClick={copyRoomId} className="lobby-copy-button">Copy</button>
+      {/* 🎬 Rope + UI appear together */}
+      {showUI && (
+        <>
+          {/* 🪢 Single Rope */}
+          <div className="rope-layer">
+            <div className="rope-single"></div>
           </div>
 
-          <button onClick={handleJoinFromLobby} className="home-button primary">
-            <FaSignInAlt /> {/* Icon */}
-            Join Meet Now
-          </button>
-          <button 
-            onClick={() => setShowLobby(false)} 
-            className="lobby-back-button"
-          >
-            Back
-          </button>
-        </div>
-      </div>
-    );
-  }
+          {/* 🧊 UI */}
+          <div className="ui rope-drop">
+            <div className="glass-card">
+              {roomCreated ? (
+                <>
+                  <h1>Meeting Ready</h1>
+                  <p>Share this Room ID</p>
 
-  // --- MAIN VIEW ---
-  return (
-    <div className="home-container">
-      <HeadTags />
-      <img src={MVMeetLogo} alt="MV Meet Logo" className="app-logo" /> 
+                  <input value={roomId} readOnly />
 
-      <div className="home-content-wrapper">
-        <h1>Welcome to MV Meet</h1>
-        <p>Simple, free video calls.</p>
-        
-        {/* Updated Input with Icon */}
-        <div className="input-wrapper">
-          <FaUser className="input-icon" />
-          <input 
-            type="text"
-            placeholder="Enter your name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="home-input"
-          />
-        </div>
+                  <button onClick={handleCopy}>
+                    Copy Room ID
+                  </button>
 
-        {/* Updated Button with Icon */}
-        <button onClick={handleCreateRoom} className="home-button primary">
-          <FaVideo /> {/* Icon */}
-          Create New Room
-        </button>
+                  <button onClick={handleJoinCreatedRoom}>
+                    Join Meeting
+                  </button>
 
-        <p className="or-divider">— or join an existing room —</p>
+                  {/* 🔙 BACK BUTTON */}
+                  <button
+                    className="back-btn"
+                    onClick={handleBack}
+                  >
+                    ← Back
+                  </button>
+                </>
+              ) : (
+                <>
+                  <p>Create or join a meeting</p>
 
-        {/* Updated Input with Icon */}
-        <div className="input-wrapper">
-          <FaKeyboard className="input-icon" />
-          <input 
-            type="text"
-            placeholder="Enter room code"
-            value={roomId}
-            onChange={(e) => setRoomId(e.target.value)}
-            className="home-input"
-          />
-        </div>
-        
-        {/* Updated Button with Icon */}
-        <button onClick={handleJoinWithCode} className="home-button secondary">
-          <FaSignInAlt /> {/* Icon */}
-          Join Room
-        </button>
-      </div>
+                  <input
+                    placeholder="Your name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                  />
+
+                  <button onClick={handleCreateRoom}>
+                    New Meeting
+                  </button>
+
+                  <div className="divider">OR</div>
+
+                  <input
+                    placeholder="Meeting ID"
+                    value={roomId}
+                    onChange={(e) => setRoomId(e.target.value)}
+                  />
+
+                  <button onClick={handleJoinWithCode}>
+                    Join
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }

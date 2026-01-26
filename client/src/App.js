@@ -1,21 +1,19 @@
-// client/src/App.js
-import React from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import LoadingPage from './LoadingPage'; // Import new
-import HomePage from './HomePage';
-import RoomPage from './RoomPage';
+import React from "react";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import HomePage from "./HomePage";
+import RoomPage from "./RoomPage";
 
 function App() {
   return (
-    <div className="App">
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<LoadingPage />} /> {/* Root is now loading page */}
-          <Route path="/home" element={<HomePage />} /> {/* Home is now /home */}
-          <Route path="/room/:roomId" element={<RoomPage />} />
-        </Routes>
-      </BrowserRouter>
-    </div>
+    <BrowserRouter>
+      <Routes>
+        {/* Home page with intro video */}
+        <Route path="/" element={<HomePage />} />
+
+        {/* Meeting room */}
+        <Route path="/room/:roomId" element={<RoomPage />} />
+      </Routes>
+    </BrowserRouter>
   );
 }
 
